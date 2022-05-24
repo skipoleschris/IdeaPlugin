@@ -187,6 +187,9 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
     val toX = horizontalCenterOfPostIt(to)
     val toY = bottomOfPostIt(to)
     val offsetXFrom = (if (isForward(from, to)) 25 else -25) + (3 * viewPostIts.indexOf(to))
+      val offsetXTo = if (isForward(from, to)) -10 else 10
+      val offsetXCircle = if (isForward(from, to)) -20 else 0
+      val arcAngle = if (isForward(from, to)) 90 else -90
     val offsetY = 25 - (3 * viewPostIts.indexOf(to))
 
     canvas.color = Color(0x80, 0x90, 0x08)
@@ -194,9 +197,9 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
         Pair(fromX, fromY),
         Pair(fromX + offsetXFrom, fromY),
         Pair(fromX + offsetXFrom, toY + offsetY),
-        Pair(toX, toY + offsetY),
-        Pair(toX, toY),
-        Pair(toX, toY))
+        Pair(toX + offsetXTo, toY + offsetY))
+    canvas.drawArc(toX + offsetXCircle, toY + offsetY - 20, 20, 20, 270, arcAngle)
+      canvas.drawLine(toX, toY + offsetY - 10, toX, toY)
     canvas.drawVerticalArrow(toX, toY, false)
     canvas.color = Color.black
   }
