@@ -1,0 +1,37 @@
+{
+    "commands": [
+        {
+            "name": "uk.co.skipoles.clashcat.clashapi.ObtainPlayerDataFromCoCApiCommand",
+            "shortName": "Obtain Player Data From CoC Api Command",
+            "handledBy": {
+                "type": "CommandHandler",
+                "name:": "uk.co.skipoles.clashcat.clashapi.ClashOfClansService",
+                "events": [
+                    {
+                        "name": "uk.co.skipoles.clashcat.clashapi.ClanDataObtainedEvent"
+                    }
+                ],
+                "commands": [
+
+                ]
+            }
+        }
+    ],
+    "queries": [
+        {
+            "name": "uk.co.skipoles.clashcat.player.TrackedPlayersQuery",
+            "shortName": "Tracked Players Query",
+            "handledBy": {
+                "type": "QueryHandler",
+                "name": "uk.co.skipoles.clashcat.player.PlayerSummaryProjection",
+                "events": [
+
+                ],
+                "commands": [
+
+                ]
+            }
+
+        }
+    ]
+}

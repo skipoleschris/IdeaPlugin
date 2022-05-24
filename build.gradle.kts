@@ -140,7 +140,9 @@ tasks {
 }
 
 dependencies {
+    implementation(kotlin("stdlib-jdk8"))
     implementation("io.sentry:sentry:5.7.3")
+    implementation("com.google.code.gson:gson:2.9.0")
 
     testImplementation("org.axonframework:axon-modelling:4.5.9")
     testImplementation("org.axonframework:axon-messaging:4.5.9")
