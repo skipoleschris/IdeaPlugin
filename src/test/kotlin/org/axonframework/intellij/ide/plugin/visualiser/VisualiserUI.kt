@@ -6,17 +6,17 @@ import java.awt.FlowLayout
 import javax.swing.JFrame
 
 fun main(args: Array<String>) {
-    val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
-    val model =
-        EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
+  val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
+  val model =
+      EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
 
-    val visualisationFactory = EventModelVisualisationFactory(model)
-    val frame = JFrame("Test")
-    frame.contentPane.layout = FlowLayout()
-    frame.contentPane.add(visualisationFactory.createVisualisation())
-    frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-    frame.size = Dimension(1600, 1000)
-    frame.isVisible = true
+  val visualisationFactory = EventModelVisualisationFactory(model)
+  val frame = JFrame("Test")
+  frame.contentPane.layout = FlowLayout()
+  frame.contentPane.add(visualisationFactory.createVisualisation())
+  frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+  frame.size = Dimension(1600, 1000)
+  frame.isVisible = true
 }
 
 private val structureJson =

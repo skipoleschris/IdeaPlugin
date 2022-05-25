@@ -24,10 +24,24 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
     // Add events that result from handling this command
     val events = command.handledBy.events.mapNotNull { structure.findEvent(it.name) }
-    for (event in events) {
-      if (!state.updateExistingEventWithNewLink(event, postIt)) {
-        state.addNewEventPostIt(event, command.handledBy, postIt)
-      }
+    events.forEach {
+      addEventAndChildren(state, it, command.handledBy.type, command.handledBy.name, postIt)
+    }
+
+    // Add additional commands created by this command
+    val commands = command.handledBy.commands.mapNotNull { structure.findCommand(it.name) }
+    commands.forEach { addCommandAndChildren(state, it, postIt) }
+  }
+
+  fun addEventAndChildren(
+      state: EventModelState,
+      event: Event,
+      handlerType: HandlerType,
+      handlerName: String,
+      linkFrom: PostIt? = null
+  ) {
+    if (!state.updateExistingEventWithNewLink(event, linkFrom)) {
+      state.addNewEventPostIt(event, handlerType, handlerName, linkFrom)
 
       for (handler in event.handledBy) {
         if (handler.isViewModel()) {
@@ -41,14 +55,17 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
               addCommandAndChildren(state, nextCommand, state.findPostIt(event))
             }
           }
+
+          handler.events.forEach {
+            val nextEvent = structure.findEvent(it.name)
+            if (nextEvent != null) {
+              addEventAndChildren(
+                  state, nextEvent, handler.type, handler.name, state.findPostIt(event))
+            }
+          }
         }
       }
-
-      // TODO: events that spawn more events
     }
-
-    // TODO: commands that spawn more commands
-
   }
 
   class EventModelState {
@@ -81,10 +98,11 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
     fun addNewEventPostIt(
         event: Event,
-        handler: CommandHandlerDetail,
+        handlerType: HandlerType,
+        handlerName: String,
         linkFrom: PostIt?
     ): EventPostIt {
-      val swimLane = swimLaneForHandler(handler)
+      val swimLane = swimLaneForHandler(handlerType, handlerName)
       val postIt =
           EventPostIt(
               event,
@@ -95,13 +113,16 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
       return postIt
     }
 
-    private fun swimLaneForHandler(handler: CommandHandlerDetail): SwimLane {
-      return if (handler.type == CommandHandlerType.CommandHandler) eventsSwimLane
+    private fun swimLaneForHandler(type: HandlerType, name: String): SwimLane {
+      return if (type == HandlerType.CommandHandler ||
+          type == HandlerType.Saga ||
+          type == HandlerType.EventHandler)
+          eventsSwimLane
       else {
-        val existing = aggregateSwimLanes.find { it.name == handler.name }
+        val existing = aggregateSwimLanes.find { it.name == name }
         return if (existing != null) existing
         else {
-          val new = SwimLane(SwimLaneType.Aggregate, 3 + aggregateSwimLanes.size, handler.name)
+          val new = SwimLane(SwimLaneType.Aggregate, 3 + aggregateSwimLanes.size, name)
           aggregateSwimLanes.add(new)
           return new
         }

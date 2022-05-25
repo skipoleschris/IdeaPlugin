@@ -33,8 +33,9 @@ class ProjectModelBuilder(private val project: Project) {
             createdBy = CommandCreatorDetail(creators.forCommand(handler)),
             handledBy =
                 CommandHandlerDetail(
-                    type = if (isAggregate(project, handler.componentName)) CommandHandlerType.Aggregate
-                    else CommandHandlerType.CommandHandler,
+                    type =
+                        if (isAggregate(project, handler.componentName)) HandlerType.Aggregate
+                        else HandlerType.CommandHandler,
                     name = handler.componentName,
                     events = creators.eventsFor(handler),
                     commands = creators.commandsFor(handler)))
@@ -68,13 +69,13 @@ class ProjectModelBuilder(private val project: Project) {
         when (handler) {
           is EventHandler ->
               Pair(
-                  if (isAggregate(project, handler.payload)) EventHandlerType.Aggregate
-                  else EventHandlerType.EventHandler,
+                  if (isAggregate(project, handler.payload)) HandlerType.Aggregate
+                  else HandlerType.EventHandler,
                   handler.element.containingClass?.qualifiedName ?: handler.processingGroup)
-          is EventSourcingHandler -> Pair(EventHandlerType.AggregateEventSource, handler.entity)
+          is EventSourcingHandler -> Pair(HandlerType.AggregateEventSource, handler.entity)
           is SagaEventHandler ->
               Pair(
-                  EventHandlerType.Saga,
+                  HandlerType.Saga,
                   handler.element.containingClass?.qualifiedName ?: handler.processingGroup)
           else -> return null
         }
@@ -111,24 +112,24 @@ class ProjectModelBuilder(private val project: Project) {
             .map { CommandReference(it.payload) }
             .toSet()
 
-      fun forCommand(handler: Handler) =
-          commandCreators
-              .filter { it.payload == handler.payload }
-              .mapNotNull(::parentHandlerClassName)
-              .toSet()
+    fun forCommand(handler: Handler) =
+        commandCreators
+            .filter { it.payload == handler.payload }
+            .mapNotNull(::parentHandlerClassName)
+            .toSet()
 
-      fun forEvent(handler: Handler) =
-          eventCreators
-              .filter { it.payload == handler.payload }
-              .mapNotNull(::parentHandlerClassName)
-              .toSet()
+    fun forEvent(handler: Handler) =
+        eventCreators
+            .filter { it.payload == handler.payload }
+            .mapNotNull(::parentHandlerClassName)
+            .toSet()
 
-      private fun parentHandlerClassName(creator: MessageCreator): String? =
-          when (val element = creator.parentHandler?.element) {
-              null -> null
-              is PsiMethod -> element.containingClass?.qualifiedName
-              else -> null
-          }
+    private fun parentHandlerClassName(creator: MessageCreator): String? =
+        when (val element = creator.parentHandler?.element) {
+          null -> null
+          is PsiMethod -> element.containingClass?.qualifiedName
+          else -> null
+        }
 
     private fun obtainMessageCreators(
         creators: (Handler) -> List<MessageCreator>

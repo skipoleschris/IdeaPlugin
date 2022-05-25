@@ -149,7 +149,7 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
     val toY = topOfPostIt(to)
     val offsetX = if (isForward(from, to)) 85 else -115
     val offsetYTop = 10
-    val offsetYBottom = 35
+    val offsetYBottom = 40
 
     canvas.color = Color.black
     canvas.drawLineSequence(
