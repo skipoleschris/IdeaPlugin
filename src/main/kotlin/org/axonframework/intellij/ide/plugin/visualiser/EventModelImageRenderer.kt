@@ -1,8 +1,11 @@
 package org.axonframework.intellij.ide.plugin.visualiser
 
+import com.intellij.ui.paint.PaintUtil
+import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics2D
+import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
@@ -23,11 +26,15 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
         Dimension(
             (horizontalSize * columns) + horizontalSpace, (verticalSize * rows) + verticalSpace)
 
-    // val gc =
-    // GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
-    // val image = UIUtil.createImage(gc, canvasSize.width.toDouble(), canvasSize.height.toDouble(),
-    // BufferedImage.TYPE_INT_ARGB, PaintUtil.RoundingMode.CEIL)
-    val image = BufferedImage(canvasSize.width, canvasSize.height, BufferedImage.TYPE_INT_ARGB)
+    val gc =
+        GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+    val image =
+        UIUtil.createImage(
+            gc,
+            canvasSize.width.toDouble(),
+            canvasSize.height.toDouble(),
+            BufferedImage.TYPE_INT_ARGB,
+            PaintUtil.RoundingMode.CEIL)
     val canvas = image.graphics as Graphics2D
     canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
     canvas.setRenderingHint(
@@ -67,7 +74,7 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
       s: String
   ): List<Pair<String, Rectangle2D>> {
     val area = canvas.font.getStringBounds(s, canvas.fontRenderContext)
-    if (area.width <= postItSize) return listOf(Pair(s, area))
+    if (area.width <= (postItSize - 2)) return listOf(Pair(s, area))
 
     return s.split(" ").fold(listOf()) { result, word ->
       if (result.isEmpty()) {
@@ -76,7 +83,7 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
         val (last, _) = result.last()
         val next = "$last $word"
         val nextArea = canvas.font.getStringBounds(next, canvas.fontRenderContext)
-        if (nextArea.width <= postItSize) result.dropLast(1).plus(Pair(next, nextArea))
+        if (nextArea.width <= (postItSize - 2)) result.dropLast(1).plus(Pair(next, nextArea))
         else result.plus(Pair(word, canvas.font.getStringBounds(word, canvas.fontRenderContext)))
       }
     }
@@ -187,9 +194,9 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
     val toX = horizontalCenterOfPostIt(to)
     val toY = bottomOfPostIt(to)
     val offsetXFrom = (if (isForward(from, to)) 25 else -25) + (3 * viewPostIts.indexOf(to))
-      val offsetXTo = if (isForward(from, to)) -10 else 10
-      val offsetXCircle = if (isForward(from, to)) -20 else 0
-      val arcAngle = if (isForward(from, to)) 90 else -90
+    val offsetXTo = if (isForward(from, to)) -10 else 10
+    val offsetXCircle = if (isForward(from, to)) -20 else 0
+    val arcAngle = if (isForward(from, to)) 90 else -90
     val offsetY = 25 - (3 * viewPostIts.indexOf(to))
 
     canvas.color = Color(0x80, 0x90, 0x08)
@@ -199,7 +206,7 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
         Pair(fromX + offsetXFrom, toY + offsetY),
         Pair(toX + offsetXTo, toY + offsetY))
     canvas.drawArc(toX + offsetXCircle, toY + offsetY - 20, 20, 20, 270, arcAngle)
-      canvas.drawLine(toX, toY + offsetY - 10, toX, toY)
+    canvas.drawLine(toX, toY + offsetY - 10, toX, toY)
     canvas.drawVerticalArrow(toX, toY, false)
     canvas.color = Color.black
   }

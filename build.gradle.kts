@@ -140,7 +140,6 @@ tasks {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
     implementation("io.sentry:sentry:5.7.3")
     implementation("com.google.code.gson:gson:2.9.0")
 
@@ -149,4 +148,6 @@ dependencies {
     testImplementation("org.axonframework:axon-eventsourcing:4.5.9")
     testImplementation("org.axonframework:axon-configuration:4.5.9")
     testImplementation("org.assertj:assertj-core:3.22.0")
+
+    testImplementation(kotlin("stdlib-jdk8"))
 }
