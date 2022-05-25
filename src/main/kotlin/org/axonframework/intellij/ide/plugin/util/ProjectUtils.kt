@@ -19,7 +19,7 @@ package org.axonframework.intellij.ide.plugin.util
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.OrderEnumerator
 
-val versionRegex = Regex("^4\\.\\d+\\.\\d+$")
+val versionRegex = Regex("^4\\.\\d+\\.\\d+(\\.\\d+)?$")
 
 fun Project.isAxon4Project() = getAxonVersions().values.any { it.matches(versionRegex) }
 

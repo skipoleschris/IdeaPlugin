@@ -2,6 +2,9 @@
 
 # Axon Framework plugin Changelog
 
+## [0.7.1-custom]
+Custom build that supports version numbers matching 4.x.x.x.
+
 ## [0.7.1]
 The plugin is now marked as compatible with IntelliJ 2022.1.
 
