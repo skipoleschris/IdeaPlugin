@@ -11,7 +11,19 @@ data class AxonProjectModel(
 
   fun findCommand(name: String) = commands.find { it.name == name }
 
+  fun eventNames(): List<String> = events.map { it.name }.sorted()
+
   fun findEvent(name: String) = events.find { it.name == name }
+
+  fun viewNames(): List<String> =
+      events
+          .flatMap { it.handledBy }
+          .asSequence()
+          .filter { it.isViewModel() }
+          .map { it.name }
+          .toSet()
+          .toList()
+          .sorted()
 }
 
 interface Message {
@@ -95,10 +107,9 @@ data class EventReference(val name: String)
 
 data class CommandReference(val name: String)
 
-data class AxonEventModel(
-    val postIts: List<PostIt>,
-) {
-  fun rows() = postIts.map { it.swimLane }.toSet().size
+data class AxonEventModel(val postIts: List<PostIt>, val links: Map<PostIt, List<PostIt>>) {
+  fun rows() =
+      postIts.map { it.swimLane }.filter { it.type == SwimLaneType.Aggregate }.toSet().size + 2
   fun columns() = postIts.maxOf { it.columnIndex } + 1
 }
 
@@ -119,12 +130,7 @@ interface PostIt {
   val swimLane: SwimLane
   val columnIndex: Int
   val text: String
-  val linksFrom: List<PostIt>
   val color: Color
-
-  fun addLink(linkFrom: PostIt?): PostIt
-
-  fun appendLink(linkFrom: PostIt?) = if (linkFrom != null) linksFrom + linkFrom else linksFrom
 }
 
 data class CommandPostIt(
@@ -132,40 +138,28 @@ data class CommandPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = command.shortName,
-    override val linksFrom: List<PostIt> = listOf(),
     override val color: Color = Color(0x56, 0xC4, 0xE8)
-) : PostIt {
-  override fun addLink(linkFrom: PostIt?) = copy(linksFrom = appendLink(linkFrom))
-}
+) : PostIt
 
 data class EventPostIt(
     val event: Event,
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = event.shortName,
-    override val linksFrom: List<PostIt> = listOf(),
     override val color: Color = Color(0xFA, 0xA4, 0x57)
-) : PostIt {
-  override fun addLink(linkFrom: PostIt?) = copy(linksFrom = appendLink(linkFrom))
-}
+) : PostIt
 
 data class ViewPostIt(
     val name: String,
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = makeShortName(name),
-    override val linksFrom: List<PostIt> = listOf(),
     override val color: Color = Color(0xD0, 0xE0, 0x68)
-) : PostIt {
-  override fun addLink(linkFrom: PostIt?) = copy(linksFrom = appendLink(linkFrom))
-}
+) : PostIt
 
 data class LabelPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String,
-    override val linksFrom: List<PostIt> = listOf(),
     override val color: Color = Color(0xFF, 0xE4, 0x76)
-) : PostIt {
-  override fun addLink(linkFrom: PostIt?) = copy(linksFrom = appendLink(linkFrom))
-}
+) : PostIt

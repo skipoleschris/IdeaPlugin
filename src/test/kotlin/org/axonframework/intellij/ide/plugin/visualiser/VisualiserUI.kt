@@ -4,19 +4,107 @@ import com.google.gson.Gson
 import java.awt.Dimension
 import java.awt.FlowLayout
 import javax.swing.JFrame
+import org.axonframework.intellij.ide.plugin.visualiser.ui.EventModelScrollPane
 
 fun main(args: Array<String>) {
   val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
-  val model =
-      EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
+  val model1 =
+  // EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
+  EventModelBuilder(structure)
+          .build("uk.co.skipoles.clashcat.player.StopTrackingPlayerCommand", listOf())
+  val model2 = handCraftedModel()
+  println(model1)
 
-  val visualisationFactory = EventModelVisualisationFactory(model)
+  val visualisation = EventModelScrollPane()
+  visualisation.visualise(model1)
   val frame = JFrame("Test")
   frame.contentPane.layout = FlowLayout()
-  frame.contentPane.add(visualisationFactory.createVisualisation())
+  frame.contentPane.add(visualisation)
   frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
   frame.size = Dimension(1600, 1000)
   frame.isVisible = true
+}
+
+private fun handCraftedModel(): AxonEventModel {
+  val command1PostIt =
+      CommandPostIt(
+          Command(
+              "Command 1",
+              createdBy = CommandCreatorDetail(setOf()),
+              handledBy =
+                  CommandHandlerDetail(
+                      HandlerType.CommandHandler,
+                      "Handler:",
+                      events = setOf(),
+                      commands = setOf())),
+          SwimLane(SwimLaneType.Timeline, 1),
+          columnIndex = 4)
+
+  val command2PostIt =
+      CommandPostIt(
+          Command(
+              "Command 2",
+              createdBy = CommandCreatorDetail(setOf()),
+              handledBy =
+                  CommandHandlerDetail(
+                      HandlerType.CommandHandler,
+                      "Handler:",
+                      events = setOf(),
+                      commands = setOf())),
+          SwimLane(SwimLaneType.Timeline, 1),
+          columnIndex = 7)
+
+  val viewPostIt = ViewPostIt("View", SwimLane(SwimLaneType.Timeline, 1), columnIndex = 5)
+
+  val event1PostIt =
+      EventPostIt(
+          Event("Event 1", createdBy = EventCreatorDetail(setOf()), handledBy = setOf()),
+          SwimLane(SwimLaneType.Events, 2),
+          columnIndex = 4)
+
+  val event2PostIt =
+      EventPostIt(
+          Event("Event 2", createdBy = EventCreatorDetail(setOf()), handledBy = setOf()),
+          SwimLane(SwimLaneType.Events, 2),
+          columnIndex = 1)
+
+  val event3PostIt =
+      EventPostIt(
+          Event("Event 3", createdBy = EventCreatorDetail(setOf()), handledBy = setOf()),
+          SwimLane(SwimLaneType.Events, 2),
+          columnIndex = 6)
+
+  val event4PostIt =
+      EventPostIt(
+          Event("Event 4", createdBy = EventCreatorDetail(setOf()), handledBy = setOf()),
+          SwimLane(SwimLaneType.Events, 3),
+          columnIndex = 2)
+
+  val event5PostIt =
+      EventPostIt(
+          Event("Event 5", createdBy = EventCreatorDetail(setOf()), handledBy = setOf()),
+          SwimLane(SwimLaneType.Events, 3),
+          columnIndex = 7)
+
+  return AxonEventModel(
+      listOf(
+          command1PostIt,
+          command2PostIt,
+          viewPostIt,
+          event1PostIt,
+          event2PostIt,
+          event3PostIt,
+          event4PostIt,
+          event5PostIt),
+      mapOf(
+          Pair(event1PostIt, listOf(command1PostIt)),
+          Pair(event2PostIt, listOf(command1PostIt)),
+          Pair(event3PostIt, listOf(command1PostIt)),
+          Pair(event4PostIt, listOf(command1PostIt, command2PostIt)),
+          Pair(event5PostIt, listOf(command1PostIt, command2PostIt)),
+          Pair(command1PostIt, listOf(event1PostIt, event2PostIt, event3PostIt, event4PostIt)),
+          // Pair(command2PostIt, listOf(command1PostIt)),
+          Pair(viewPostIt, listOf(event1PostIt, event2PostIt, event3PostIt, event4PostIt))))
 }
 
 private val structureJson =

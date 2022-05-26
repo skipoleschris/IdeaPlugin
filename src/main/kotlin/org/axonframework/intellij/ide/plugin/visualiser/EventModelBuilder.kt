@@ -2,19 +2,20 @@ package org.axonframework.intellij.ide.plugin.visualiser
 
 class EventModelBuilder(private val structure: AxonProjectModel) {
 
-  fun build(commandName: String): AxonEventModel {
+  fun build(commandName: String, exclude: List<String>): AxonEventModel {
     val initialCommand =
         structure.findCommand(commandName)
             ?: throw java.lang.IllegalArgumentException("Unknown initial command: $commandName")
 
     val state = EventModelState()
-    addCommandAndChildren(state, initialCommand)
-    return AxonEventModel(state.allPostIts())
+    addCommandAndChildren(state, initialCommand, exclude)
+    return AxonEventModel(state.allPostIts(), state.allLinks())
   }
 
   private fun addCommandAndChildren(
       state: EventModelState,
       command: Command,
+      exclude: List<String>,
       linkFrom: PostIt? = null
   ) {
     if (state.updateExistingCommandWithNewLink(command, linkFrom)) return
@@ -25,19 +26,24 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
     // Add events that result from handling this command
     val events = command.handledBy.events.mapNotNull { structure.findEvent(it.name) }
     events.forEach {
-      addEventAndChildren(state, it, command.handledBy.type, command.handledBy.name, postIt)
+      if (!exclude.contains(it.name))
+          addEventAndChildren(
+              state, it, command.handledBy.type, command.handledBy.name, exclude, postIt)
     }
 
     // Add additional commands created by this command
     val commands = command.handledBy.commands.mapNotNull { structure.findCommand(it.name) }
-    commands.forEach { addCommandAndChildren(state, it, postIt) }
+    commands.forEach {
+      if (!exclude.contains(it.name)) addCommandAndChildren(state, it, exclude, postIt)
+    }
   }
 
-  fun addEventAndChildren(
+  private fun addEventAndChildren(
       state: EventModelState,
       event: Event,
       handlerType: HandlerType,
       handlerName: String,
+      exclude: List<String>,
       linkFrom: PostIt? = null
   ) {
     if (!state.updateExistingEventWithNewLink(event, linkFrom)) {
@@ -46,21 +52,28 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
       for (handler in event.handledBy) {
         if (handler.isViewModel()) {
           if (!state.updateExistingViewWithNewLink(handler.name, event)) {
-            state.addNewViewPostIt(handler.name, event)
+            if (!exclude.contains(handler.name)) state.addNewViewPostIt(handler.name, event)
           }
         } else {
           handler.commands.forEach {
             val nextCommand = structure.findCommand(it.name)
             if (nextCommand != null) {
-              addCommandAndChildren(state, nextCommand, state.findPostIt(event))
+              if (!exclude.contains(nextCommand.name))
+                  addCommandAndChildren(state, nextCommand, exclude, state.findPostIt(event))
             }
           }
 
           handler.events.forEach {
             val nextEvent = structure.findEvent(it.name)
             if (nextEvent != null) {
-              addEventAndChildren(
-                  state, nextEvent, handler.type, handler.name, state.findPostIt(event))
+              if (!exclude.contains(nextEvent.name))
+                  addEventAndChildren(
+                      state,
+                      nextEvent,
+                      handler.type,
+                      handler.name,
+                      exclude,
+                      state.findPostIt(event))
             }
           }
         }
@@ -76,20 +89,20 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
     private val postIts: MutableList<PostIt> = mutableListOf()
     private val aggregateSwimLanes: MutableList<SwimLane> = mutableListOf()
 
+    private var links: MutableMap<PostIt, List<PostIt>> = mutableMapOf()
+
     fun allPostIts(): List<PostIt> =
         aggregateSwimLanes.map { LabelPostIt(it, 0, it.shortName ?: "") } + postIts.toList()
+
+    fun allLinks(): Map<PostIt, List<PostIt>> = links.toMap()
 
     fun updateExistingCommandWithNewLink(command: Command, linkFrom: PostIt?) =
         updatePostItWithNewLink(findPostIt(command), linkFrom)
 
     fun addNewCommandPostIt(command: Command, linkFrom: PostIt?): CommandPostIt {
-      val postIt =
-          CommandPostIt(
-              command,
-              timelineSwimLane,
-              currentColumn,
-              linksFrom = if (linkFrom == null) listOf() else listOf(linkFrom))
+      val postIt = CommandPostIt(command, timelineSwimLane, currentColumn)
       postIts.add(postIt)
+      updatePostItWithNewLink(postIt, linkFrom)
       return postIt
     }
 
@@ -103,13 +116,9 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
         linkFrom: PostIt?
     ): EventPostIt {
       val swimLane = swimLaneForHandler(handlerType, handlerName)
-      val postIt =
-          EventPostIt(
-              event,
-              swimLane,
-              currentColumn++,
-              linksFrom = if (linkFrom == null) listOf() else listOf(linkFrom))
+      val postIt = EventPostIt(event, swimLane, currentColumn++)
       postIts.add(postIt)
+      updatePostItWithNewLink(postIt, linkFrom)
       return postIt
     }
 
@@ -134,20 +143,18 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
     fun addNewViewPostIt(name: String, event: Event): ViewPostIt {
       val linkFrom = findPostIt(event)
-      val postIt =
-          ViewPostIt(
-              name,
-              timelineSwimLane,
-              currentColumn++,
-              linksFrom = if (linkFrom == null) listOf() else listOf(linkFrom))
+      val postIt = ViewPostIt(name, timelineSwimLane, currentColumn++)
       postIts.add(postIt)
+      updatePostItWithNewLink(postIt, linkFrom)
       return postIt
     }
 
     private fun updatePostItWithNewLink(postIt: PostIt?, linkFrom: PostIt?): Boolean =
         if (postIt != null) {
-          postIts.remove(postIt)
-          postIts.add(postIt.addLink(linkFrom))
+          if (linkFrom != null) {
+            val linksFrom = links.getOrDefault(postIt, listOf())
+            links[postIt] = linksFrom + linkFrom
+          }
           true
         } else false
 
