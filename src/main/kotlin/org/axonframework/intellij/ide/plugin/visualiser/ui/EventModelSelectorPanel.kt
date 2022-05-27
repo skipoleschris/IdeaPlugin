@@ -46,7 +46,7 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
 
     val exportModelButton = JButton(exportModelIcon)
     exportModelButton.toolTipText = "Export model..."
-    exportModelButton.isEnabled = false
+    exportModelButton.isEnabled = true
 
     add(JLabel("Select initial command:"))
     add(commandSelector)
@@ -66,7 +66,6 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
       customiseButton.isEnabled = (selectedCommand != null)
       copyButton.isEnabled = (selectedCommand != null)
       exportImageButton.isEnabled = (selectedCommand != null)
-      exportModelButton.isEnabled = (selectedCommand != null)
     }
 
     customiseButton.addActionListener {

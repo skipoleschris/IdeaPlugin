@@ -7,23 +7,16 @@ data class AxonProjectModel(
     val events: List<Event>,
     val queries: List<Query>
 ) {
-  fun commandNames(): List<String> = commands.map { it.name }.sorted()
+  fun commandNames(): Set<String> = commands.map { it.name }.toSortedSet()
 
   fun findCommand(name: String) = commands.find { it.name == name }
 
-  fun eventNames(): List<String> = events.map { it.name }.sorted()
+  fun eventNames(): Set<String> = events.map { it.name }.toSortedSet()
 
   fun findEvent(name: String) = events.find { it.name == name }
 
-  fun viewNames(): List<String> =
-      events
-          .flatMap { it.handledBy }
-          .asSequence()
-          .filter { it.isViewModel() }
-          .map { it.name }
-          .toSet()
-          .toList()
-          .sorted()
+  fun viewNames(): Set<String> =
+      events.flatMap { it.handledBy }.filter { it.isViewModel() }.map { it.name }.toSortedSet()
 
   fun eventsReferencingView(view: String): List<String> =
       events.filter { event -> event.handledBy.find { it.name == view } != null }.map { it.name }

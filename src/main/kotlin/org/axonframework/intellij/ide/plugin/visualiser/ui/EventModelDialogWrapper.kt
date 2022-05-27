@@ -26,6 +26,7 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
 
   init {
     title = "Event Modelling Visualisation"
+    isModal = false
     init()
 
     selectorPanel.addVisualiseListener { event ->

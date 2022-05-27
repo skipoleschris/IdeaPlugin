@@ -26,36 +26,47 @@ class ProjectModelBuilder(private val project: Project) {
   }
 
   private fun buildCommands(creators: Creators): List<Command> =
-      project.handlerResolver().findAllHandlers().filterIsInstance<CommandHandler>().map { handler
-        ->
-        Command(
-            name = handler.payload,
-            createdBy = CommandCreatorDetail(creators.forCommand(handler)),
-            handledBy =
-                CommandHandlerDetail(
-                    type =
-                        if (isAggregate(project, handler.componentName)) HandlerType.Aggregate
-                        else HandlerType.CommandHandler,
-                    name = handler.componentName,
-                    events = creators.eventsFor(handler),
-                    commands = creators.commandsFor(handler)))
-      }
+      project
+          .handlerResolver()
+          .findAllHandlers()
+          .filterIsInstance<CommandHandler>()
+          .distinctBy { it.payload }
+          .map { handler ->
+            Command(
+                name = handler.payload,
+                createdBy = CommandCreatorDetail(creators.forCommand(handler)),
+                handledBy =
+                    CommandHandlerDetail(
+                        type =
+                            if (isAggregate(project, handler.componentName)) HandlerType.Aggregate
+                            else HandlerType.CommandHandler,
+                        name = handler.componentName,
+                        events = creators.eventsFor(handler),
+                        commands = creators.commandsFor(handler)))
+          }
 
   private fun isAggregate(project: Project, name: String) =
       project.aggregateResolver().getEntityByName(name) != null
 
   private fun buildEvents(creators: Creators): List<Event> =
-      project.handlerResolver().findAllHandlers().filter(::isEventHandler).map { handler ->
-        Event(
-            name = handler.payload,
-            createdBy = EventCreatorDetail(creators.forEvent(handler)),
-            handledBy =
-                project
-                    .handlerResolver()
-                    .findHandlersForType(handler.payload)
-                    .mapNotNull { eventHandler -> handlerToDetail(project, creators, eventHandler) }
-                    .toSet())
-      }
+      project
+          .handlerResolver()
+          .findAllHandlers()
+          .filter(::isEventHandler)
+          .distinctBy { it.payload }
+          .map { handler ->
+            Event(
+                name = handler.payload,
+                createdBy = EventCreatorDetail(creators.forEvent(handler)),
+                handledBy =
+                    project
+                        .handlerResolver()
+                        .findHandlersForType(handler.payload)
+                        .mapNotNull { eventHandler ->
+                          handlerToDetail(project, creators, eventHandler)
+                        }
+                        .toSet())
+          }
 
   private fun isEventHandler(handler: Handler) =
       handler is EventHandler || handler is EventSourcingHandler || handler is SagaEventHandler
@@ -84,16 +95,21 @@ class ProjectModelBuilder(private val project: Project) {
   }
 
   private fun buildQueries(creators: Creators): List<Query> =
-      project.handlerResolver().findAllHandlers().filterIsInstance<QueryHandler>().map { handler ->
-        Query(
-            name = handler.payload,
-            handledBy =
-                QueryHandlerDetail(
-                    QueryHandlerType.QueryHandler,
-                    handler.element.containingClass?.qualifiedName ?: handler.componentName,
-                    creators.eventsFor(handler),
-                    creators.commandsFor(handler)))
-      }
+      project
+          .handlerResolver()
+          .findAllHandlers()
+          .filterIsInstance<QueryHandler>()
+          .distinctBy { it.payload }
+          .map { handler ->
+            Query(
+                name = handler.payload,
+                handledBy =
+                    QueryHandlerDetail(
+                        QueryHandlerType.QueryHandler,
+                        handler.element.containingClass?.qualifiedName ?: handler.componentName,
+                        creators.eventsFor(handler),
+                        creators.commandsFor(handler)))
+          }
 
   private class Creators(private val project: Project) {
 
