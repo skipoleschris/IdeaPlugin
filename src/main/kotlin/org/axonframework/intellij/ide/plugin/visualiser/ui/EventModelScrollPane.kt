@@ -8,12 +8,14 @@ import java.awt.event.MouseListener
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
 import org.axonframework.intellij.ide.plugin.visualiser.AxonEventModel
+import org.axonframework.intellij.ide.plugin.visualiser.PostIt
 
 class EventModelScrollPane : JBScrollPane() {
 
   private val maxWidth: Int = 1500
   private val maxHeight: Int = 900
 
+  private val listeners: MutableList<(PostItSelectedEvent) -> Unit> = mutableListOf()
   private var renderer: EventModelImageRenderer? = null
   private var initialCommand: String? = null
   private var image: BufferedImage? = null
@@ -39,7 +41,8 @@ class EventModelScrollPane : JBScrollPane() {
 
           override fun mouseReleased(e: MouseEvent?) {
             if (e != null && renderer != null) {
-              println(renderer!!.postItAtPosition(e.x, e.y))
+              val postIt = renderer!!.postItAtPosition(e.x, e.y)
+              if (postIt != null) listeners.forEach { it(PostItSelectedEvent(postIt, e)) }
             }
           }
 
@@ -57,6 +60,10 @@ class EventModelScrollPane : JBScrollPane() {
 
   fun currentImage(): BufferedImage? = image
 
+  fun addListener(f: (PostItSelectedEvent) -> Unit) {
+    listeners.add(f)
+  }
+
   class ImagePanel(private val image: BufferedImage) : JPanel(true) {
     init {
       preferredSize = Dimension(image.width, image.height)
@@ -68,3 +75,5 @@ class EventModelScrollPane : JBScrollPane() {
     }
   }
 }
+
+data class PostItSelectedEvent(val postIt: PostIt, val mouseEvent: MouseEvent)

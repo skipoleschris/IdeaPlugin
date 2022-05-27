@@ -24,6 +24,9 @@ data class AxonProjectModel(
           .toSet()
           .toList()
           .sorted()
+
+  fun eventsReferencingView(view: String): List<String> =
+      events.filter { event -> event.handledBy.find { it.name == view } != null }.map { it.name }
 }
 
 interface Message {
