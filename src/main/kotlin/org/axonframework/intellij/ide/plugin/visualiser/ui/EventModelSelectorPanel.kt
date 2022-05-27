@@ -13,11 +13,13 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
 
   private val defaultCommand = "Command..."
   private var selectedCommand: String? = null
-  private val listeners: MutableList<(VisualiseModelEvent) -> Unit> = mutableListOf()
+  private val visualiseListeners: MutableList<(VisualiseModelEvent) -> Unit> = mutableListOf()
+  private val actionListeners: MutableList<(EventModelActionEvent) -> Unit> = mutableListOf()
   private val exclusions: MutableList<String> = mutableListOf()
 
   private val customiseIcon =
       IconLoader.getIcon("/icons/customize.png", EventModelSelectorPanel::class.java)
+  private val copyIcon = IconLoader.getIcon("/icons/copy.png", EventModelSelectorPanel::class.java)
   private val exportImageIcon =
       IconLoader.getIcon("/icons/export-image.png", EventModelSelectorPanel::class.java)
   private val exportModelIcon =
@@ -34,6 +36,10 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
     customiseButton.toolTipText = "Customise items..."
     customiseButton.isEnabled = false
 
+    val copyButton = JButton(copyIcon)
+    copyButton.toolTipText = "Copy image to clipboard"
+    copyButton.isEnabled = false
+
     val exportImageButton = JButton(exportImageIcon)
     exportImageButton.toolTipText = "Export image..."
     exportImageButton.isEnabled = false
@@ -45,6 +51,7 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
     add(JLabel("Select initial command:"))
     add(commandSelector)
     add(customiseButton)
+    add(copyButton)
     add(exportImageButton)
     add(exportModelButton)
 
@@ -55,8 +62,9 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
           } else null
 
       val publish = VisualiseModelEvent(selectedCommand, exclusions.toList())
-      listeners.forEach { it(publish) }
+      visualiseListeners.forEach { it(publish) }
       customiseButton.isEnabled = (selectedCommand != null)
+      copyButton.isEnabled = (selectedCommand != null)
       exportImageButton.isEnabled = (selectedCommand != null)
       exportModelButton.isEnabled = (selectedCommand != null)
     }
@@ -67,14 +75,38 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
         exclusions.clear()
         exclusions.addAll(modelElementSelector.deselectedItems())
         val publish = VisualiseModelEvent(selectedCommand, exclusions.toList())
-        listeners.forEach { it(publish) }
+        visualiseListeners.forEach { it(publish) }
       }
+    }
+
+    copyButton.addActionListener {
+      actionListeners.forEach { it(EventModelActionEvent(EventModelActions.CopyImageToClipboard)) }
+    }
+
+    exportImageButton.addActionListener {
+      actionListeners.forEach { it(EventModelActionEvent(EventModelActions.ExportImage)) }
+    }
+
+    exportModelButton.addActionListener {
+      actionListeners.forEach { it(EventModelActionEvent(EventModelActions.ExportModel)) }
     }
   }
 
-  fun addListener(listener: (VisualiseModelEvent) -> Unit) {
-    listeners.add(listener)
+  fun addVisualiseListener(listener: (VisualiseModelEvent) -> Unit) {
+    visualiseListeners.add(listener)
+  }
+
+  fun addActionListener(listener: (EventModelActionEvent) -> Unit) {
+    actionListeners.add(listener)
   }
 }
 
 data class VisualiseModelEvent(val initialCommand: String?, val exclude: List<String>)
+
+enum class EventModelActions {
+  CopyImageToClipboard,
+  ExportImage,
+  ExportModel
+}
+
+data class EventModelActionEvent(val action: EventModelActions)

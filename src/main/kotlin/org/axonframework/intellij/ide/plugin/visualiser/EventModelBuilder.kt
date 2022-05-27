@@ -9,7 +9,7 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
     val state = EventModelState()
     addCommandAndChildren(state, initialCommand, exclude)
-    return AxonEventModel(state.allPostIts(), state.allLinks())
+    return AxonEventModel(commandName, state.allPostIts(), state.allLinks())
   }
 
   private fun addCommandAndChildren(

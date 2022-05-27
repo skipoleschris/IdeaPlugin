@@ -1,6 +1,5 @@
 package org.axonframework.intellij.ide.plugin.actions
 
-import com.google.gson.GsonBuilder
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
@@ -22,11 +21,7 @@ class VisualiseModelAction : AnAction(AxonIcons.Axon) {
         runBackgroundableTask("Building Axon Structure Model", project) { indicator ->
           indicator.isIndeterminate = true
           ApplicationManager.getApplication().runReadAction {
-            println("Starting to build model....")
             val structure = ProjectModelBuilder(project).build()
-
-            val gson = GsonBuilder().setPrettyPrinting().create()
-            println(gson.toJson(structure))
 
             ApplicationManager.getApplication().invokeLater {
               EventModelDialogWrapper(structure).show()

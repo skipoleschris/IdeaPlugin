@@ -87,6 +87,7 @@ private fun handCraftedModel(): AxonEventModel {
           columnIndex = 7)
 
   return AxonEventModel(
+      "Command 1",
       listOf(
           command1PostIt,
           command2PostIt,

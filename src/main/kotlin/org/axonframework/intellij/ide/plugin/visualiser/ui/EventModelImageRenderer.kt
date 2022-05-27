@@ -54,6 +54,14 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
     return image
   }
 
+  fun postItAtPosition(x: Int, y: Int): PostIt? =
+      model.postIts.find {
+        val xStart = ((horizontalSpace + postItSize) * it.columnIndex) + horizontalSpace
+        val yStart = ((verticalSpace + postItSize) * (it.swimLane.rowIndex - 1)) + verticalSpace
+
+        x >= xStart && x <= (xStart + postItSize) && y >= yStart && y <= (yStart + postItSize)
+      }
+
   private fun drawPostIt(canvas: Graphics2D, postIt: PostIt) {
     val x = ((horizontalSpace + postItSize) * postIt.columnIndex) + horizontalSpace
     val y = ((verticalSpace + postItSize) * (postIt.swimLane.rowIndex - 1)) + verticalSpace

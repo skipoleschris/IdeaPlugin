@@ -107,7 +107,11 @@ data class EventReference(val name: String)
 
 data class CommandReference(val name: String)
 
-data class AxonEventModel(val postIts: List<PostIt>, val links: Map<PostIt, List<PostIt>>) {
+data class AxonEventModel(
+    val initialCommand: String,
+    val postIts: List<PostIt>,
+    val links: Map<PostIt, List<PostIt>>
+) {
   fun rows() =
       postIts.map { it.swimLane }.filter { it.type == SwimLaneType.Aggregate }.toSet().size + 2
   fun columns() = postIts.maxOf { it.columnIndex } + 1
