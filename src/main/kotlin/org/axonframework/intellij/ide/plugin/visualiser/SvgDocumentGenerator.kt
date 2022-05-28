@@ -1,19 +1,21 @@
-package org.axonframework.intellij.ide.plugin.visualiser.ui
+package org.axonframework.intellij.ide.plugin.visualiser
 
-import com.intellij.ui.paint.PaintUtil
-import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics2D
-import java.awt.GraphicsEnvironment
-import java.awt.RenderingHints
 import java.awt.image.BufferedImage
-import org.axonframework.intellij.ide.plugin.visualiser.AxonEventModel
-import org.axonframework.intellij.ide.plugin.visualiser.CommandPostIt
-import org.axonframework.intellij.ide.plugin.visualiser.PostIt
-import org.axonframework.intellij.ide.plugin.visualiser.ViewPostIt
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.StringReader
+import javax.imageio.ImageIO
+import org.apache.batik.transcoder.TranscoderInput
+import org.apache.batik.transcoder.TranscoderOutput
+import org.apache.batik.transcoder.image.PNGTranscoder
+import org.axonframework.intellij.ide.plugin.visualiser.ui.drawArrow
+import org.axonframework.intellij.ide.plugin.visualiser.ui.drawPostIt
+import org.jfree.graphics2d.svg.SVGGraphics2D
 
-internal class EventModelImageRenderer(private val model: AxonEventModel) {
+class SvgDocumentGenerator(private val model: AxonEventModel) {
 
   private val postItSize: Int = 150
   private val horizontalSpace: Int = 50
@@ -21,59 +23,54 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
   private val horizontalSize = postItSize + horizontalSpace
   private val verticalSize = postItSize + verticalSpace
 
-  fun renderImage(): BufferedImage {
-    val columns = model.columns()
-    val rows = model.rows()
-
-    val canvasSize =
-        Dimension(
-            (horizontalSize * columns) + horizontalSpace, (verticalSize * rows) + verticalSpace)
-
-    val gc =
-        GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
-    val image =
-        UIUtil.createImage(
-            gc,
-            canvasSize.width.toDouble(),
-            canvasSize.height.toDouble(),
-            BufferedImage.TYPE_INT_ARGB,
-            PaintUtil.RoundingMode.CEIL)
-    val canvas = image.graphics as Graphics2D
-    canvas.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-    canvas.setRenderingHint(
-        RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-
-    canvas.color = Color.white
-    canvas.fillRect(0, 0, canvasSize.width, canvasSize.height)
+  fun renderDocument(scale: Double = 1.0): SizedAndScaledSvgImage {
+    val size = imageSize()
+    val graphics = SVGGraphics2D(size.width, size.height)
 
     model.postIts.forEach {
-      drawPostIt(canvas, it)
-      routeLines(canvas, it)
+      drawPostIt(graphics, it)
+      routeLines(graphics, it)
     }
 
-    return image
+    if (scale != 1.0) graphics.scale(scale, scale)
+
+    return SizedAndScaledSvgImage(
+        graphics.svgDocument, (size.width * scale).toInt(), (size.height * scale).toInt(), scale)
   }
 
-  fun postItAtPosition(x: Int, y: Int): PostIt? =
-      model.postIts.find {
-        val xStart = ((horizontalSpace + postItSize) * it.columnIndex) + horizontalSpace
-        val yStart = ((verticalSpace + postItSize) * (it.swimLane.rowIndex - 1)) + verticalSpace
+  private fun imageSize(): Dimension {
+    val columns = model.columns()
+    val rows = model.rows()
+    return Dimension(
+        ((horizontalSize * columns) + horizontalSpace), ((verticalSize * rows) + verticalSpace))
+  }
 
-        x >= xStart && x <= (xStart + postItSize) && y >= yStart && y <= (yStart + postItSize)
-      }
+  fun postItAtPosition(x: Int, y: Int, scale: Double): PostIt? {
+    val scaledX = (x / scale).toInt()
+    val scaledY = (y / scale).toInt()
+    return model.postIts.find {
+      val xStart = (((horizontalSpace + postItSize) * it.columnIndex) + horizontalSpace)
+      val yStart = (((verticalSpace + postItSize) * (it.swimLane.rowIndex - 1)) + verticalSpace)
 
-  private fun drawPostIt(canvas: Graphics2D, postIt: PostIt) {
+      scaledX >= xStart &&
+          scaledX <= (xStart + postItSize) &&
+          scaledY >= yStart &&
+          scaledY <= (yStart + postItSize)
+    }
+  }
+
+  private fun drawPostIt(graphics: Graphics2D, postIt: PostIt) {
     val x = ((horizontalSpace + postItSize) * postIt.columnIndex) + horizontalSpace
     val y = ((verticalSpace + postItSize) * (postIt.swimLane.rowIndex - 1)) + verticalSpace
-    canvas.drawPostIt(postIt, x, y, postItSize)
+    graphics.drawPostIt(postIt, x, y, postItSize)
   }
 
-  private fun routeLines(canvas: Graphics2D, postIt: PostIt) {
-    canvas.color = Color.black
-    model.links[postIt]?.forEach { routeLine(canvas, it, postIt) }
+  private fun routeLines(graphics: Graphics2D, postIt: PostIt) {
+    graphics.color = Color.black
+    model.links[postIt]?.forEach { routeLine(graphics, it, postIt) }
   }
 
-  private fun routeLine(canvas: Graphics2D, from: PostIt, to: PostIt) {
+  private fun routeLine(graphics: Graphics2D, from: PostIt, to: PostIt) {
     val fromPosition = Pair(from.columnIndex, from.swimLane.rowIndex)
     val toPosition = Pair(to.columnIndex, to.swimLane.rowIndex)
 
@@ -99,14 +96,14 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
           Pair(topOfPostIt(from), bottomOfPostIt(to))
         }
 
-    canvas.color =
+    graphics.color =
         when (to) {
           is CommandPostIt -> to.color.darker()
           is ViewPostIt -> to.color.darker()
           else -> Color.black
         }
-    canvas.drawLine(fromX, fromY, toX, toY)
-    canvas.drawArrow(toX, fromX, toY, fromY)
+    graphics.drawLine(fromX, fromY, toX, toY)
+    graphics.drawArrow(toX, fromX, toY, fromY)
   }
 
   private fun isSameRow(from: PostIt, to: PostIt) = from.swimLane.rowIndex == to.swimLane.rowIndex
@@ -146,4 +143,30 @@ internal class EventModelImageRenderer(private val model: AxonEventModel) {
 
   private fun verticalBottomQuarterOfPostIt(postIt: PostIt): Int =
       bottomOfPostIt(postIt) - (postItSize / 4)
+}
+
+data class SizedAndScaledSvgImage(
+    val document: String,
+    val width: Int,
+    val height: Int,
+    val scale: Double
+) {
+
+  fun asPNG(): BufferedImage {
+    val transcoder = PNGTranscoder()
+    transcoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, width.toFloat())
+    transcoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, height.toFloat())
+    transcoder.addTranscodingHint(PNGTranscoder.KEY_BACKGROUND_COLOR, Color.white)
+
+    val input = TranscoderInput(StringReader(document))
+    val stream = ByteArrayOutputStream()
+    val output = TranscoderOutput(stream)
+    transcoder.transcode(input, output)
+
+    stream.flush()
+    stream.close()
+
+    val imageData = stream.toByteArray()
+    return ImageIO.read(ByteArrayInputStream(imageData))
+  }
 }

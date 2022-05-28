@@ -7,58 +7,64 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.awt.image.BufferedImage
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import org.axonframework.intellij.ide.plugin.visualiser.AxonEventModel
 import org.axonframework.intellij.ide.plugin.visualiser.PostIt
+import org.axonframework.intellij.ide.plugin.visualiser.SizedAndScaledSvgImage
+import org.axonframework.intellij.ide.plugin.visualiser.SvgDocumentGenerator
 
 class EventModelScrollPane : JBScrollPane() {
 
-  private val maxWidth: Int = 1500
-  private val maxHeight: Int = 900
+  private val maxWidth: Int = 1000
+  private val maxHeight: Int = 600
 
   private val listeners: MutableList<(PostItSelectedEvent) -> Unit> = mutableListOf()
-  private var renderer: EventModelImageRenderer? = null
-  private var initialCommand: String? = null
-  private var image: BufferedImage? = null
+  private var model: AxonEventModel? = null
+  private var svg: SizedAndScaledSvgImage? = null
 
   init {
     setViewportView(JPanel())
     preferredSize = Dimension(maxWidth, maxHeight)
   }
 
-  fun visualise(model: AxonEventModel) {
-    renderer = EventModelImageRenderer(model)
-    initialCommand = model.initialCommand
-    image = renderer!!.renderImage()
+  fun visualise(model: AxonEventModel, scale: Double = 1.0) {
+    SwingUtilities.invokeLater {
+      val renderer = SvgDocumentGenerator(model)
+      this.model = model
+      svg = renderer.renderDocument(scale)
 
-    val imagePanel = ImagePanel(image!!)
-    setViewportView(imagePanel)
+      val imagePanel = ImagePanel(svg!!.asPNG())
+      setViewportView(imagePanel)
 
-    imagePanel.addMouseListener(
-        object : MouseListener {
-          override fun mouseClicked(e: MouseEvent?) {}
+      imagePanel.addMouseListener(
+          object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {}
 
-          override fun mousePressed(e: MouseEvent?) {}
+            override fun mousePressed(e: MouseEvent?) {}
 
-          override fun mouseReleased(e: MouseEvent?) {
-            if (e != null && renderer != null) {
-              val postIt = renderer!!.postItAtPosition(e.x, e.y)
-              if (postIt != null) listeners.forEach { it(PostItSelectedEvent(postIt, e)) }
+            override fun mouseReleased(e: MouseEvent?) {
+              if (e != null) {
+                val postIt = renderer.postItAtPosition(e.x, e.y, svg!!.scale)
+                if (postIt != null) listeners.forEach { it(PostItSelectedEvent(postIt, e)) }
+              }
             }
-          }
 
-          override fun mouseEntered(e: MouseEvent?) {}
+            override fun mouseEntered(e: MouseEvent?) {}
 
-          override fun mouseExited(e: MouseEvent?) {}
-        })
+            override fun mouseExited(e: MouseEvent?) {}
+          })
+    }
   }
 
   fun clear() {
+    model = null
     setViewportView(JPanel())
   }
 
-  fun currentCommandFocus(): String? = initialCommand
+  fun unscaledSvgVisualisation(): SizedAndScaledSvgImage? =
+      if (model != null) SvgDocumentGenerator(model!!).renderDocument(1.0) else null
 
-  fun currentImage(): BufferedImage? = image
+  fun currentCommandFocus(): String? = model?.initialCommand
 
   fun addListener(f: (PostItSelectedEvent) -> Unit) {
     listeners.add(f)

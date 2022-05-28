@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.awt.RelativePoint
 import java.io.FileWriter
+import java.nio.charset.Charset
 import javax.imageio.ImageIO
 import javax.swing.BorderFactory
 import javax.swing.JTextArea
@@ -30,18 +31,35 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
     init()
 
     selectorPanel.addVisualiseListener { event ->
-      if (event.initialCommand != null) {
-        scrollPane.visualise(modelBuilder.build(event.initialCommand, event.exclude))
-      } else scrollPane.clear()
+      if (event.initialCommand != null)
+          scrollPane.visualise(modelBuilder.build(event.initialCommand, event.exclude), event.scale)
+      else scrollPane.clear()
     }
 
     selectorPanel.addActionListener { event ->
       when (event.action) {
         EventModelActions.CopyImageToClipboard -> {
-          val image = scrollPane.currentImage()
-          if (image != null) ClipboardUtil.copyToClipboard(image)
+          val svg = scrollPane.unscaledSvgVisualisation()
+          if (svg != null) ClipboardUtil.copyToClipboard(svg.asPNG())
         }
-        EventModelActions.ExportImage -> {
+        EventModelActions.ExportSVG -> {
+          val descriptor =
+              FileSaverDescriptor(
+                  "Export Image", "Choose the location to export the event model image", "svg")
+          val nullFile: VirtualFile? = null
+          val wrapper =
+              FileChooserFactory.getInstance()
+                  .createSaveFileDialog(descriptor, scrollPane)
+                  .save(nullFile, "${scrollPane.currentCommandFocus()}.svg")
+
+          if (wrapper != null) {
+            val svg = scrollPane.unscaledSvgVisualisation()
+            if (svg != null) {
+              with(FileWriter(wrapper.file, Charset.forName("UTF-8"))) { this.write(svg.document) }
+            }
+          }
+        }
+        EventModelActions.ExportPNG -> {
           val descriptor =
               FileSaverDescriptor(
                   "Export Image", "Choose the location to export the event model image", "png")
@@ -52,7 +70,10 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
                   .save(nullFile, "${scrollPane.currentCommandFocus()}.png")
 
           if (wrapper != null) {
-            ImageIO.write(scrollPane.currentImage(), "png", wrapper.file)
+            val svg = scrollPane.unscaledSvgVisualisation()
+            if (svg != null) {
+              ImageIO.write(svg.asPNG(), "png", wrapper.file)
+            }
           }
         }
         EventModelActions.ExportModel -> {

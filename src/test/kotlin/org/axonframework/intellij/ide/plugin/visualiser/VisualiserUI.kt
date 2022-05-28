@@ -1,28 +1,40 @@
 package org.axonframework.intellij.ide.plugin.visualiser
 
 import com.google.gson.Gson
-import java.awt.Dimension
 import java.awt.FlowLayout
+import javax.swing.JButton
 import javax.swing.JFrame
-import org.axonframework.intellij.ide.plugin.visualiser.ui.EventModelScrollPane
+import org.axonframework.intellij.ide.plugin.visualiser.ui.EventModelDialogWrapper
 
 fun main(args: Array<String>) {
   val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
-  val model1 =
-  // EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
-  EventModelBuilder(structure)
-          .build("uk.co.skipoles.clashcat.player.StopTrackingPlayerCommand", listOf())
-  val model2 = handCraftedModel()
-  println(model1)
-
-  val visualisation = EventModelScrollPane()
-  visualisation.visualise(model1)
+  //  val model1 =
+  //  // EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
+  //  EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand",
+  // listOf())
+  //  val model2 = handCraftedModel()
+  //  println(model1)
+  //
+  //  val visualisation = EventModelScrollPane()
+  //
   val frame = JFrame("Test")
   frame.contentPane.layout = FlowLayout()
-  frame.contentPane.add(visualisation)
+  //    frame.contentPane.add(visualisation)
   frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-  frame.size = Dimension(1600, 1000)
+
+  val button = JButton("Start...")
+  button.addActionListener { EventModelDialogWrapper(structure).show() }
+  frame.add(button)
+  //    frame.size = Dimension(1600, 1000)
+  frame.pack()
   frame.isVisible = true
+  //
+  //  Thread.sleep(2000)
+  //  visualisation.visualise(model1)
+  //
+  //  Thread.sleep(5000)
+  //  visualisation.clear()
+
 }
 
 private fun handCraftedModel(): AxonEventModel {
