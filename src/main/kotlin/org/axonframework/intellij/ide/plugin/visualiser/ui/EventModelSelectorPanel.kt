@@ -39,7 +39,7 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
     val customiseButton = JButton(customiseIcon)
     customiseButton.preferredSize = Dimension(40, 40)
     customiseButton.toolTipText = "Customise items..."
-    customiseButton.isEnabled = false
+    customiseButton.isEnabled = true
 
     val copyButton = JButton(copyIcon)
     copyButton.preferredSize = Dimension(40, 40)
@@ -94,7 +94,6 @@ class EventModelSelectorPanel(model: AxonProjectModel) : JPanel() {
       val publish =
           VisualiseModelEvent(selectedCommand, exclusions.toList(), zoomSlider.value / 100.0)
       visualiseListeners.forEach { it(publish) }
-      customiseButton.isEnabled = (selectedCommand != null)
       copyButton.isEnabled = (selectedCommand != null)
       exportPNGButton.isEnabled = (selectedCommand != null)
       exportSVGButton.isEnabled = (selectedCommand != null)

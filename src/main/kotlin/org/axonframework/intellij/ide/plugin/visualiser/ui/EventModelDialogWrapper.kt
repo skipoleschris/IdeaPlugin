@@ -55,7 +55,10 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
           if (wrapper != null) {
             val svg = scrollPane.unscaledSvgVisualisation()
             if (svg != null) {
-              with(FileWriter(wrapper.file, Charset.forName("UTF-8"))) { this.write(svg.document) }
+              with(FileWriter(wrapper.file, Charset.forName("UTF-8"))) {
+                this.write(svg.document)
+                this.flush()
+              }
             }
           }
         }
@@ -90,6 +93,7 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
             with(FileWriter(wrapper.file)) {
               val gson = GsonBuilder().setPrettyPrinting().create()
               gson.toJson(structure, this)
+              this.flush()
             }
           }
         }

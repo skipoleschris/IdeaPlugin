@@ -147,6 +147,7 @@ dependencies {
   implementation("io.sentry:sentry:5.7.3")
   implementation("com.google.code.gson:gson:2.9.0")
   implementation("org.jfree:jfreesvg:3.4.2")
+  implementation("org.scijava:swing-checkbox-tree:1.0.2")
 
   testImplementation("org.axonframework:axon-modelling:4.5.9")
   testImplementation("org.axonframework:axon-messaging:4.5.9")
