@@ -18,7 +18,7 @@ class ModelElementDialogWrapper(model: AxonProjectModel, private val exclusions:
     DialogWrapper(true) {
 
   private val itemsPanel: JPanel = JPanel()
-  private val buttonPanel: JPanel = JPanel()
+  private val controlsPanel: JPanel = JPanel()
   private val commandsTree = buildPackageTree(model.commandNames())
   private val eventsTree = buildPackageTree(model.eventNames())
   private val viewsTree = buildPackageTree(model.viewNames())
@@ -77,8 +77,41 @@ class ModelElementDialogWrapper(model: AxonProjectModel, private val exclusions:
       (viewsTree.model as PackageHierarchyTreeModel).deselectAllNodes()
       repaint()
     }
+
+    val search =
+        SearchPanel(
+            model.commandNames().toList().sorted() +
+                model.eventNames().toList().sorted() +
+                model.viewNames().toList().sorted())
+    search.addSearchSelectionListener {
+      val commandPath = (commandsTree.model as PackageHierarchyTreeModel).findPath(it.item)
+      val eventPath = (eventsTree.model as PackageHierarchyTreeModel).findPath(it.item)
+      val viewPath = (viewsTree.model as PackageHierarchyTreeModel).findPath(it.item)
+
+      if (commandPath != null) {
+        commandsTree.selectionPath = commandPath
+        commandsTree.scrollPathToVisible(commandPath)
+        eventsTree.clearSelection()
+        viewsTree.clearSelection()
+      } else if (eventPath != null) {
+        commandsTree.clearSelection()
+        eventsTree.selectionPath = eventPath
+        eventsTree.scrollPathToVisible(eventPath)
+        viewsTree.clearSelection()
+      } else if (viewPath != null) {
+        commandsTree.clearSelection()
+        eventsTree.clearSelection()
+        viewsTree.selectionPath = viewPath
+        viewsTree.scrollPathToVisible(viewPath)
+      }
+    }
+
+    controlsPanel.add(search)
+
+    val buttonPanel = JPanel()
     buttonPanel.add(selectAll)
     buttonPanel.add(deselectAll)
+    controlsPanel.add(buttonPanel)
 
     init()
   }
@@ -109,7 +142,7 @@ class ModelElementDialogWrapper(model: AxonProjectModel, private val exclusions:
 
   override fun createCenterPanel() = itemsPanel
 
-  override fun createNorthPanel() = buttonPanel
+  override fun createNorthPanel() = controlsPanel
 
   fun deselectedItems(): List<String> =
       (commandsTree.model as PackageHierarchyTreeModel).deselectedClassNames() +

@@ -5,6 +5,7 @@ import javax.swing.event.TreeModelEvent
 import javax.swing.event.TreeModelListener
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreeNode
+import javax.swing.tree.TreePath
 import org.scijava.swing.checkboxtree.CheckBoxNodeData
 
 class PackageHierarchyTreeModel(fullyQualifiedClassNames: List<String>, exclusions: List<String>) :
@@ -69,6 +70,13 @@ class PackageHierarchyTreeModel(fullyQualifiedClassNames: List<String>, exclusio
         val data = it.userObject as CheckBoxNodeData
         if (data.isChecked) null else pathToPackageName(it.path)
       }
+
+  fun findPath(className: String): TreePath? =
+      visitAllNodes(root as DefaultMutableTreeNode, leafsOnly = false) {
+            if (pathToPackageName(it.path) == className) it.path else null
+          }
+          .map { TreePath(it) }
+          .firstOrNull()
 
   companion object PackageHierarchyTreeModelUtils {
 
