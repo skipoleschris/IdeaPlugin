@@ -1,6 +1,5 @@
 package org.axonframework.intellij.ide.plugin.visualiser.ui
 
-import java.awt.Color
 import java.awt.Dimension
 import javax.swing.BorderFactory
 import javax.swing.JButton
@@ -32,12 +31,8 @@ class SearchPanel(private val possibleValues: List<String>) : JPanel() {
     add(nextButton)
 
     countLabel.preferredSize = Dimension(50, 20)
-    countLabel.foreground = Color.darkGray
-    countLabel.background = Color.red
     previousButton.border = BorderFactory.createEmptyBorder()
-    previousButton.foreground = Color.darkGray
     nextButton.border = BorderFactory.createEmptyBorder()
-    nextButton.foreground = Color.darkGray
 
     previousButton.isEnabled = false
     nextButton.isEnabled = false

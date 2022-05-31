@@ -68,7 +68,6 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
     val x = ((horizontalSpace + postItSize) * postIt.columnIndex) + horizontalSpace
     val y = ((verticalSpace + postItSize) * (postIt.swimLane.rowIndex - 1)) + verticalSpace
     graphics.drawPostIt(postIt, x, y, postItSize)
-    println("($x, $y) ${postIt.text}")
     return PostItBox(x, y, postItSize, postItSize)
   }
 
@@ -92,22 +91,7 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
 
     val splitPoints =
         intersection.postIt.moveOutside(intersection.entryPoint, intersection.exitPoint)
-
-    println("Intersection: $intersection, split at: $splitPoints")
-    val line = intersection.line
-    return if (splitPoints.size == 1) {
-      val point = splitPoints.first()
-      listOf(
-          Line(line.fromX, line.fromY, point.x, point.y, false),
-          Line(point.x, point.y, line.toX, line.toY, true))
-    } else {
-      val point1 = splitPoints.first()
-      val point2 = splitPoints.last()
-      listOf(
-          Line(line.fromX, line.fromY, point1.x, point1.y, false),
-          Line(point1.x, point1.y, point2.x, point2.y, false),
-          Line(point2.x, point2.y, line.toX, line.toY, true))
-    }
+    return intersection.line.split(splitPoints)
   }
 
   private fun generateDirectLines(postIt: PostIt): List<Line> =
@@ -139,10 +123,11 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
           Pair(topOfPostIt(from), bottomOfPostIt(to))
         }
 
-    return Line(fromX, fromY, toX, toY, true)
+    return Line(fromX, fromY, toX, toY, true, to.lineColor)
   }
 
   private fun drawLine(graphics: Graphics2D, line: Line) {
+    graphics.color = line.color
     graphics.drawLine(line.fromX, line.fromY, line.toX, line.toY)
     if (line.hasArrow) graphics.drawArrow(line.toX, line.fromX, line.toY, line.fromY)
   }
@@ -185,7 +170,10 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
 
   private fun verticalCenterOfPostIt(postIt: PostIt): Int = topOfPostIt(postIt) + (postItSize / 2)
 
-  data class PostItBox(val x: Int, val y: Int, val width: Int, val height: Int) {
+  class PostItBox(val x: Int, val y: Int, private val width: Int, private val height: Int) {
+
+    private val usedRoutingPoints: MutableList<Point> = mutableListOf()
+
     fun contains(point: Point): Boolean =
         (point.x >= x && point.x < (x + width) && point.y >= y && point.y < (y + height))
 
@@ -281,11 +269,52 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
       BottomRight
     }
 
-    private val moveDistance = 5
-    private fun topLeft() = Point(x - moveDistance, y - moveDistance)
-    private fun topRight() = Point(x + width + moveDistance, y - moveDistance)
-    private fun bottomLeft() = Point(x - moveDistance, y + height + moveDistance)
-    private fun bottomRight() = Point(x + width + moveDistance, y + height + moveDistance)
+    private fun topLeft() = findUniqueRoutingPoint(x, y, -1, -1)
+
+    private fun topRight() = findUniqueRoutingPoint(x + width, y, 1, -1)
+
+    private fun bottomLeft() = findUniqueRoutingPoint(x, y + height, -1, 1)
+
+    private fun bottomRight() = findUniqueRoutingPoint(x + width, y + height, 1, 1)
+
+    private fun findUniqueRoutingPoint(
+        fromX: Int,
+        fromY: Int,
+        xDirection: Int,
+        yDirection: Int,
+        moveDistance: Int = 7,
+        offsetDistance: Int = 4
+    ): Point {
+      var point = Point(fromX + (moveDistance * xDirection), fromY + (moveDistance * yDirection))
+      while (usedRoutingPoints.contains(point)) {
+        point =
+            Point(point.x + (offsetDistance * xDirection), point.y + (offsetDistance * yDirection))
+      }
+      usedRoutingPoints.add(point)
+      return point
+    }
+
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as PostItBox
+
+      if (x != other.x) return false
+      if (y != other.y) return false
+      if (width != other.width) return false
+      if (height != other.height) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = x
+      result = 31 * result + y
+      result = 31 * result + width
+      result = 31 * result + height
+      return result
+    }
   }
 
   data class Line(
@@ -293,7 +322,8 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
       val fromY: Int,
       val toX: Int,
       val toY: Int,
-      val hasArrow: Boolean
+      val hasArrow: Boolean,
+      val color: Color
   ) {
     fun start() = Point(fromX, fromY)
 
@@ -332,6 +362,22 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
       }
 
       return points.toList()
+    }
+
+    fun split(at: List<Point>): List<Line> {
+      return if (at.size == 1) {
+        val point = at.first()
+        listOf(
+            Line(fromX, fromY, point.x, point.y, false, color),
+            Line(point.x, point.y, toX, toY, true, color))
+      } else {
+        val point1 = at.first()
+        val point2 = at.last()
+        listOf(
+            Line(fromX, fromY, point1.x, point1.y, false, color),
+            Line(point1.x, point1.y, point2.x, point2.y, false, color),
+            Line(point2.x, point2.y, toX, toY, true, color))
+      }
     }
   }
 

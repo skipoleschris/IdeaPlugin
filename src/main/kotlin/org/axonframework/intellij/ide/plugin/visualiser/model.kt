@@ -131,6 +131,7 @@ interface PostIt {
   val columnIndex: Int
   val text: String
   val color: Color
+  val lineColor: Color
 }
 
 data class CommandPostIt(
@@ -138,7 +139,8 @@ data class CommandPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = command.shortName,
-    override val color: Color = Color(0x56, 0xC4, 0xE8)
+    override val color: Color = Color(0x56, 0xC4, 0xE8),
+    override val lineColor: Color = Color(0x56, 0xC4, 0xE8).darker()
 ) : PostIt
 
 data class EventPostIt(
@@ -146,7 +148,8 @@ data class EventPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = event.shortName,
-    override val color: Color = Color(0xFA, 0xA4, 0x57)
+    override val color: Color = Color(0xFA, 0xA4, 0x57),
+    override val lineColor: Color = Color.black
 ) : PostIt
 
 data class ViewPostIt(
@@ -154,12 +157,14 @@ data class ViewPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String = makeShortName(name),
-    override val color: Color = Color(0xD0, 0xE0, 0x68)
+    override val color: Color = Color(0xD0, 0xE0, 0x68),
+    override val lineColor: Color = Color(0xD0, 0xE0, 0x68).darker()
 ) : PostIt
 
 data class LabelPostIt(
     override val swimLane: SwimLane,
     override val columnIndex: Int,
     override val text: String,
-    override val color: Color = Color(0xFF, 0xE4, 0x76)
+    override val color: Color = Color(0xFF, 0xE4, 0x76),
+    override val lineColor: Color = Color.black
 ) : PostIt
