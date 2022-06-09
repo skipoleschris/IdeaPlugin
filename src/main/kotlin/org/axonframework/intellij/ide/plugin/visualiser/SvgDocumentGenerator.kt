@@ -91,13 +91,15 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
 
     val splitPoints =
         intersection.postIt.moveOutside(intersection.entryPoint, intersection.exitPoint)
-    return intersection.line.split(splitPoints)
+    val line = intersection.line
+    return line.split(splitPoints, line.hasArrowFrom, line.hasArrowTo)
   }
 
   private fun generateDirectLines(postIt: PostIt): List<Line> =
-      model.links[postIt]?.map { generateDirectLine(it, postIt) } ?: emptyList()
+      model.links[postIt]?.map { generateDirectLine(it.postIt, postIt, it.bidirectional) }
+          ?: emptyList()
 
-  private fun generateDirectLine(from: PostIt, to: PostIt): Line {
+  private fun generateDirectLine(from: PostIt, to: PostIt, bidirectional: Boolean): Line {
     val fromPosition = Pair(from.columnIndex, from.swimLane.rowIndex)
     val toPosition = Pair(to.columnIndex, to.swimLane.rowIndex)
 
@@ -123,13 +125,14 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
           Pair(topOfPostIt(from), bottomOfPostIt(to))
         }
 
-    return Line(fromX, fromY, toX, toY, true, to.lineColor)
+    return Line(fromX, fromY, toX, toY, bidirectional, true, to.lineColor)
   }
 
   private fun drawLine(graphics: Graphics2D, line: Line) {
     graphics.color = line.color
     graphics.drawLine(line.fromX, line.fromY, line.toX, line.toY)
-    if (line.hasArrow) graphics.drawArrow(line.toX, line.fromX, line.toY, line.fromY)
+    if (line.hasArrowFrom) graphics.drawArrow(line.fromX, line.toX, line.fromY, line.toY)
+    if (line.hasArrowTo) graphics.drawArrow(line.toX, line.fromX, line.toY, line.fromY)
   }
 
   private fun lineCrossesPostIt(boxes: List<PostItBox>, line: Line): IntersectionResult {
@@ -175,7 +178,7 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
     private val usedRoutingPoints: MutableList<Point> = mutableListOf()
 
     fun contains(point: Point): Boolean =
-        (point.x >= x && point.x < (x + width) && point.y >= y && point.y < (y + height))
+        (point.x >= x && point.x <= (x + width) && point.y >= y && point.y <= (y + height))
 
     fun moveOutside(entryPoint: Point, exitPoint: Point): List<Point> =
         when (sectorFor(entryPoint)) {
@@ -322,7 +325,8 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
       val fromY: Int,
       val toX: Int,
       val toY: Int,
-      val hasArrow: Boolean,
+      val hasArrowFrom: Boolean,
+      val hasArrowTo: Boolean,
       val color: Color
   ) {
     fun start() = Point(fromX, fromY)
@@ -364,19 +368,26 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
       return points.toList()
     }
 
-    fun split(at: List<Point>): List<Line> {
+    fun split(at: List<Point>, fromArrow: Boolean, toArrow: Boolean): List<Line> {
       return if (at.size == 1) {
         val point = at.first()
         listOf(
-            Line(fromX, fromY, point.x, point.y, false, color),
-            Line(point.x, point.y, toX, toY, true, color))
+            Line(fromX, fromY, point.x, point.y, fromArrow, false, color),
+            Line(point.x, point.y, toX, toY, false, toArrow, color = color))
       } else {
         val point1 = at.first()
         val point2 = at.last()
         listOf(
-            Line(fromX, fromY, point1.x, point1.y, false, color),
-            Line(point1.x, point1.y, point2.x, point2.y, false, color),
-            Line(point2.x, point2.y, toX, toY, true, color))
+            Line(fromX, fromY, point1.x, point1.y, fromArrow, false, color),
+            Line(
+                point1.x,
+                point1.y,
+                point2.x,
+                point2.y,
+                hasArrowFrom = false,
+                hasArrowTo = false,
+                color = color),
+            Line(point2.x, point2.y, toX, toY, false, toArrow, color))
       }
     }
   }

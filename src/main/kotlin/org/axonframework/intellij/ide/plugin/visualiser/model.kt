@@ -106,12 +106,14 @@ data class CommandReference(val name: String)
 data class AxonEventModel(
     val initialCommand: String,
     val postIts: List<PostIt>,
-    val links: Map<PostIt, List<PostIt>>
+    val links: Map<PostIt, Set<PostItLink>>
 ) {
   fun rows() =
       postIts.map { it.swimLane }.filter { it.type == SwimLaneType.Aggregate }.toSet().size + 2
   fun columns() = postIts.maxOf { it.columnIndex } + 1
 }
+
+data class PostItLink(val postIt: PostIt, val bidirectional: Boolean = false)
 
 enum class SwimLaneType {
   Timeline,

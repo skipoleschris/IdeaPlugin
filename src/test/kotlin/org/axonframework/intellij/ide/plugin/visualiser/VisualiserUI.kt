@@ -2,12 +2,14 @@ package org.axonframework.intellij.ide.plugin.visualiser
 
 import com.google.gson.Gson
 import java.awt.FlowLayout
+import java.io.FileReader
 import javax.swing.JButton
 import javax.swing.JFrame
 import org.axonframework.intellij.ide.plugin.visualiser.ui.EventModelDialogWrapper
 
 fun main(args: Array<String>) {
-  val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
+  // val structure = Gson().fromJson(structureJson, AxonProjectModel::class.java)
+  val structure = Gson().fromJson(FileReader("complex-model.json"), AxonProjectModel::class.java)
   //  val model1 =
   //  // EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand")
   //  EventModelBuilder(structure).build("uk.co.skipoles.clashcat.sagas.RegisterClanCommand",
@@ -110,14 +112,17 @@ private fun handCraftedModel(): AxonEventModel {
           event4PostIt,
           event5PostIt),
       mapOf(
-          Pair(event1PostIt, listOf(command1PostIt)),
-          Pair(event2PostIt, listOf(command1PostIt)),
-          Pair(event3PostIt, listOf(command1PostIt)),
-          Pair(event4PostIt, listOf(command1PostIt, command2PostIt)),
-          Pair(event5PostIt, listOf(command1PostIt, command2PostIt)),
-          Pair(command1PostIt, listOf(event1PostIt, event2PostIt, event3PostIt, event4PostIt)),
-          // Pair(command2PostIt, listOf(command1PostIt)),
-          Pair(viewPostIt, listOf(event1PostIt, event2PostIt, event3PostIt, event4PostIt))))
+          //          Pair(event1PostIt, listOf(command1PostIt)),
+          //          Pair(event2PostIt, listOf(command1PostIt)),
+          //          Pair(event3PostIt, listOf(command1PostIt)),
+          //          Pair(event4PostIt, listOf(command1PostIt, command2PostIt)),
+          //          Pair(event5PostIt, listOf(command1PostIt, command2PostIt)),
+          //          Pair(command1PostIt, listOf(event1PostIt, event2PostIt, event3PostIt,
+          // event4PostIt)),
+          //          // Pair(command2PostIt, listOf(command1PostIt)),
+          //          Pair(viewPostIt, listOf(event1PostIt, event2PostIt, event3PostIt,
+          // event4PostIt))))
+          ))
 }
 
 private val structureJson =

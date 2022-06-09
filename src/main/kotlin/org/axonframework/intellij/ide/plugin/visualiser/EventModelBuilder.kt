@@ -51,9 +51,9 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
       for (handler in event.handledBy) {
         if (handler.isViewModel()) {
-          if (!state.updateExistingViewWithNewLink(handler.name, event)) {
-            if (!exclude.contains(handler.name)) state.addNewViewPostIt(handler.name, event)
-          }
+          // if (!state.updateExistingViewWithNewLink(handler.name, event)) {
+          if (!exclude.contains(handler.name)) state.addNewViewPostIt(handler.name, event)
+          // }
         } else {
           handler.commands.forEach {
             val nextCommand = structure.findCommand(it.name)
@@ -89,12 +89,12 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
     private val postIts: MutableList<PostIt> = mutableListOf()
     private val aggregateSwimLanes: MutableList<SwimLane> = mutableListOf()
 
-    private var links: MutableMap<PostIt, List<PostIt>> = mutableMapOf()
+    private var links: MutableMap<PostIt, Set<PostItLink>> = mutableMapOf()
 
     fun allPostIts(): List<PostIt> =
         aggregateSwimLanes.map { LabelPostIt(it, 0, it.shortName ?: "") } + postIts.toList()
 
-    fun allLinks(): Map<PostIt, List<PostIt>> = links.toMap()
+    fun allLinks(): Map<PostIt, Set<PostItLink>> = links.toMap()
 
     fun updateExistingCommandWithNewLink(command: Command, linkFrom: PostIt?) =
         updatePostItWithNewLink(findPostIt(command), linkFrom)
@@ -138,9 +138,6 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
       }
     }
 
-    fun updateExistingViewWithNewLink(name: String, event: Event) =
-        updatePostItWithNewLink(findPostIt(name), findPostIt(event))
-
     fun addNewViewPostIt(name: String, event: Event): ViewPostIt {
       val linkFrom = findPostIt(event)
       val postIt = ViewPostIt(name, timelineSwimLane, currentColumn++)
@@ -152,8 +149,14 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
     private fun updatePostItWithNewLink(postIt: PostIt?, linkFrom: PostIt?): Boolean =
         if (postIt != null) {
           if (linkFrom != null) {
-            val linksFrom = links.getOrDefault(postIt, listOf())
-            links[postIt] = linksFrom + linkFrom
+            val reverseLink = links[linkFrom]
+            val reverseLinkTo = reverseLink?.find { it.postIt == postIt }
+            if (reverseLinkTo != null) {
+              links[linkFrom] = reverseLink - reverseLinkTo + PostItLink(postIt, true)
+            } else {
+              val linksFrom = links.getOrDefault(postIt, setOf())
+              links[postIt] = linksFrom + PostItLink(linkFrom)
+            }
           }
           true
         } else false
@@ -163,8 +166,5 @@ class EventModelBuilder(private val structure: AxonProjectModel) {
 
     fun findPostIt(event: Event): EventPostIt? =
         postIts.filterIsInstance<EventPostIt>().find { it.event == event }
-
-    private fun findPostIt(name: String): ViewPostIt? =
-        postIts.filterIsInstance<ViewPostIt>().find { it.name == name }
   }
 }
