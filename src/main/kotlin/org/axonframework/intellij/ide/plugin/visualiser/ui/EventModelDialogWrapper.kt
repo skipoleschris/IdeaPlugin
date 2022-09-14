@@ -107,9 +107,9 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
           val builder = StringBuilder()
 
           builder.append("Created by:")
-          command.createdBy.names.forEach {
+          command.createdBy.forEach {
             builder.append("\n  - ")
-            builder.append(it)
+            builder.append(it.name)
           }
 
           builder.append("\n\nHandled by:")
@@ -153,9 +153,9 @@ class EventModelDialogWrapper(structure: AxonProjectModel) : DialogWrapper(true)
           val builder = StringBuilder()
 
           builder.append("Created by:")
-          event.createdBy.names.forEach {
+          event.createdBy.forEach {
             builder.append("\n  - ")
-            builder.append(it)
+            builder.append(it.name)
           }
 
           builder.append("\n\nHandled by:")

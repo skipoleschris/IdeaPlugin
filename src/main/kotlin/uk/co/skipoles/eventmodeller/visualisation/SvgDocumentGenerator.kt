@@ -1,5 +1,6 @@
-package org.axonframework.intellij.ide.plugin.visualiser
+package uk.co.skipoles.eventmodeller.visualisation
 
+import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics2D
@@ -13,11 +14,9 @@ import kotlin.math.abs
 import org.apache.batik.transcoder.TranscoderInput
 import org.apache.batik.transcoder.TranscoderOutput
 import org.apache.batik.transcoder.image.PNGTranscoder
-import org.axonframework.intellij.ide.plugin.visualiser.ui.drawArrow
-import org.axonframework.intellij.ide.plugin.visualiser.ui.drawPostIt
 import org.jfree.graphics2d.svg.SVGGraphics2D
 
-class SvgDocumentGenerator(private val model: AxonEventModel) {
+class SvgDocumentGenerator(private val model: VisualisationModel) {
 
   private val postItSize: Int = 150
   private val horizontalSpace: Int = 75
@@ -37,11 +36,14 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
     val lines = routeLines(model.postIts.flatMap(::generateDirectLines), boxes)
     lines.forEach { drawLine(graphics, it) }
 
+    addSwimLaneSeparators(graphics, model.swimLanes.size, size.width)
+
     if (scale != 1.0) graphics.scale(scale, scale)
 
     return SizedAndScaledSvgImage(
         graphics.svgDocument, (size.width * scale).toInt(), (size.height * scale).toInt(), scale)
   }
+
   private fun imageSize(): Dimension {
     val columns = model.columns()
     val rows = model.rows()
@@ -49,19 +51,19 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
         ((horizontalSize * columns) + horizontalSpace), ((verticalSize * rows) + verticalSpace))
   }
 
-  fun postItAtPosition(x: Int, y: Int, scale: Double): PostIt? {
-    val scaledX = (x / scale).toInt()
-    val scaledY = (y / scale).toInt()
-    return model.postIts.find {
-      val xStart = (((horizontalSpace + postItSize) * it.columnIndex) + horizontalSpace)
-      val yStart = (((verticalSpace + postItSize) * (it.swimLane.rowIndex - 1)) + verticalSpace)
-
-      scaledX >= xStart &&
-          scaledX <= (xStart + postItSize) &&
-          scaledY >= yStart &&
-          scaledY <= (yStart + postItSize)
-    }
-  }
+  //  fun postItAtPosition(x: Int, y: Int, scale: Double): PostIt? {
+  //    val scaledX = (x / scale).toInt()
+  //    val scaledY = (y / scale).toInt()
+  //    return model.postIts.find {
+  //      val xStart = (((horizontalSpace + postItSize) * it.columnIndex) + horizontalSpace)
+  //      val yStart = (((verticalSpace + postItSize) * (it.swimLane.rowIndex - 1)) + verticalSpace)
+  //
+  //      scaledX >= xStart &&
+  //          scaledX <= (xStart + postItSize) &&
+  //          scaledY >= yStart &&
+  //          scaledY <= (yStart + postItSize)
+  //    }
+  //  }
 
   private fun drawPostIt(graphics: Graphics2D, postIt: PostIt): PostItBox {
     val x = ((horizontalSpace + postItSize) * postIt.columnIndex) + horizontalSpace
@@ -95,7 +97,7 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
   }
 
   private fun generateDirectLines(postIt: PostIt): List<Line> =
-      model.links[postIt]?.map { generateDirectLine(it.postIt, postIt, it.bidirectional) }
+      model.links[postIt]?.map { generateDirectLine(postIt, it.postIt, it.bidirectional) }
           ?: emptyList()
 
   private fun generateDirectLine(from: PostIt, to: PostIt, bidirectional: Boolean): Line {
@@ -124,14 +126,32 @@ class SvgDocumentGenerator(private val model: AxonEventModel) {
           Pair(topOfPostIt(from), bottomOfPostIt(to))
         }
 
-    return Line(fromX, fromY, toX, toY, bidirectional, true, to.lineColor)
+    val lineColor =
+        when (from) {
+          is CommandPostIt -> PostIt.COMMAND_COLOR
+          is EventPostIt -> PostIt.EVENT_COLOR
+          is SagaPostIt -> if (to is CommandPostIt) PostIt.COMMAND_COLOR else PostIt.EVENT_COLOR
+          else -> Color.black
+        }
+
+    return Line(fromX, fromY, toX, toY, bidirectional, true, lineColor)
   }
 
   private fun drawLine(graphics: Graphics2D, line: Line) {
     graphics.color = line.color
+    graphics.stroke = BasicStroke(2.0f)
     graphics.drawLine(line.fromX, line.fromY, line.toX, line.toY)
     if (line.hasArrowFrom) graphics.drawArrow(line.fromX, line.toX, line.fromY, line.toY)
     if (line.hasArrowTo) graphics.drawArrow(line.toX, line.fromX, line.toY, line.fromY)
+  }
+
+  private fun addSwimLaneSeparators(graphics: Graphics2D, numberOfSwimLanes: Int, imageWidth: Int) {
+    graphics.color = Color(0xE0, 0xB0, 0xFF)
+    graphics.stroke = BasicStroke(2.0f)
+    (1 until numberOfSwimLanes).forEach {
+      val y = (verticalSize * it) + (verticalSpace / 2)
+      graphics.drawLine(50, y, imageWidth - 100, y)
+    }
   }
 
   private fun lineCrossesPostIt(boxes: List<PostItBox>, line: Line): IntersectionResult {

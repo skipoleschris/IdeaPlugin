@@ -4,6 +4,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiMethod
 import org.axonframework.intellij.ide.plugin.api.Handler
 import org.axonframework.intellij.ide.plugin.api.MessageCreator
+import org.axonframework.intellij.ide.plugin.api.MessageHandlerType
 import org.axonframework.intellij.ide.plugin.resolving.handlers.types.CommandHandler
 import org.axonframework.intellij.ide.plugin.resolving.handlers.types.EventHandler
 import org.axonframework.intellij.ide.plugin.resolving.handlers.types.EventSourcingHandler
@@ -34,7 +35,7 @@ class ProjectModelBuilder(private val project: Project) {
           .map { handler ->
             Command(
                 name = handler.payload,
-                createdBy = CommandCreatorDetail(creators.forCommand(handler)),
+                createdBy = creators.forCommand(handler),
                 handledBy =
                     CommandHandlerDetail(
                         type =
@@ -45,9 +46,6 @@ class ProjectModelBuilder(private val project: Project) {
                         commands = creators.commandsFor(handler)))
           }
 
-  private fun isAggregate(project: Project, name: String) =
-      project.aggregateResolver().getEntityByName(name) != null
-
   private fun buildEvents(creators: Creators): List<Event> =
       project
           .handlerResolver()
@@ -57,7 +55,7 @@ class ProjectModelBuilder(private val project: Project) {
           .map { handler ->
             Event(
                 name = handler.payload,
-                createdBy = EventCreatorDetail(creators.forEvent(handler)),
+                createdBy = creators.forEvent(handler),
                 handledBy =
                     project
                         .handlerResolver()
@@ -111,6 +109,11 @@ class ProjectModelBuilder(private val project: Project) {
                         creators.commandsFor(handler)))
           }
 
+  companion object {
+    private fun isAggregate(project: Project, name: String) =
+        project.aggregateResolver().getEntityByName(name) != null
+  }
+
   private class Creators(private val project: Project) {
 
     private val eventCreators = obtainMessageCreators(::eventCreatorsForHandler)
@@ -131,15 +134,34 @@ class ProjectModelBuilder(private val project: Project) {
     fun forCommand(handler: Handler) =
         commandCreators
             .filter { it.payload == handler.payload }
-            .mapNotNull(::parentHandlerClassName)
+            .mapNotNull {
+              val name = parentHandlerClassName(it)
+              val type = parentHandlerType(it, name)
+              if (type == null || name == null) null else CommandCreatorDetail(type, name)
+            }
             .toSet()
 
     fun forEvent(handler: Handler) =
         eventCreators
             .filter { it.payload == handler.payload }
-            .mapNotNull(::parentHandlerClassName)
+            .mapNotNull {
+              val name = parentHandlerClassName(it)
+              val type = parentHandlerType(it, name)
+              if (type == null || name == null) null else EventCreatorDetail(type, name)
+            }
             .toSet()
 
+    private fun parentHandlerType(creator: MessageCreator, name: String?): HandlerType? =
+        when (creator.parentHandler?.handlerType) {
+          MessageHandlerType.COMMAND -> HandlerType.CommandHandler
+          MessageHandlerType.COMMAND_INTERCEPTOR -> HandlerType.CommandHandler
+          MessageHandlerType.EVENT ->
+              if (name != null && isAggregate(project, name)) HandlerType.Aggregate
+              else HandlerType.EventHandler
+          MessageHandlerType.EVENT_SOURCING -> HandlerType.AggregateEventSource
+          MessageHandlerType.SAGA -> HandlerType.Saga
+          else -> null
+        }
     private fun parentHandlerClassName(creator: MessageCreator): String? =
         when (val element = creator.parentHandler?.element) {
           null -> null

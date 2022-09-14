@@ -41,11 +41,15 @@ fun makeShortName(name: String): String {
 data class Command(
     override val name: String,
     override val shortName: String = makeShortName(name),
-    val createdBy: CommandCreatorDetail,
+    val createdBy: Set<CommandCreatorDetail>,
     val handledBy: CommandHandlerDetail
 ) : Message
 
-data class CommandCreatorDetail(val names: Set<String>)
+data class CommandCreatorDetail(
+    val type: HandlerType,
+    val name: String,
+    val shortName: String = makeShortName(name)
+)
 
 enum class HandlerType {
   Aggregate,
@@ -66,11 +70,15 @@ data class CommandHandlerDetail(
 data class Event(
     override val name: String,
     override val shortName: String = makeShortName(name),
-    val createdBy: EventCreatorDetail,
+    val createdBy: Set<EventCreatorDetail>,
     val handledBy: Set<EventHandlerDetail>
 ) : Message
 
-data class EventCreatorDetail(val names: Set<String>)
+data class EventCreatorDetail(
+    val type: HandlerType,
+    val name: String,
+    val shortName: String = makeShortName(name)
+)
 
 data class EventHandlerDetail(
     val type: HandlerType,
@@ -80,6 +88,8 @@ data class EventHandlerDetail(
     val commands: Set<CommandReference>
 ) {
   fun isViewModel() = type == HandlerType.EventHandler && events.isEmpty() && commands.isEmpty()
+
+  fun isSaga() = type == HandlerType.Saga
 }
 
 data class Query(
@@ -116,6 +126,7 @@ data class AxonEventModel(
 data class PostItLink(val postIt: PostIt, val bidirectional: Boolean = false)
 
 enum class SwimLaneType {
+  Saga,
   Timeline,
   Events,
   Aggregate
@@ -168,5 +179,13 @@ data class LabelPostIt(
     override val columnIndex: Int,
     override val text: String,
     override val color: Color = Color(0xFF, 0xE4, 0x76),
+    override val lineColor: Color = Color.black
+) : PostIt
+
+data class SagaPostIt(
+    override val swimLane: SwimLane,
+    override val columnIndex: Int,
+    override val text: String,
+    override val color: Color = Color(0xFF, 0xFF, 0xFF),
     override val lineColor: Color = Color.black
 ) : PostIt
